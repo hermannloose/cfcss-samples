@@ -1,5 +1,5 @@
 all:
-	clang -03 -g -o test test.c qsort.s printarray.c
+	clang -03 -g -o test test.c qsort.c printarray.c
 
 o0:
 	clang -O0 -g -o test test.c qsort.c printarray.c

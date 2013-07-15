@@ -1,4 +1,9 @@
 *.bc
 *.dot
+*.ii
+*.ll
+*.o
+*.pdf
 *.ps
+*.s
 *.swp

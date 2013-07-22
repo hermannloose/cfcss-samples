@@ -1,48 +1,50 @@
 all:
 	clang -03 -g -o test test.c qsort.c printarray.c
 
+clean:
+	rm *.bc
+	rm *.dot
+	rm *.pdf
+	rm *.s
+
 o0:
 	clang -O0 -g -o test test.c qsort.c printarray.c
 
 o3:
 	clang -O3 -g -o test test.c qsort.c printarray.c
 
-qsort.bc: qsort.c
-	clang -O3 -g -c -emit-llvm -o qsort.bc qsort.c
+%.bc: %.c
+	clang -g -c -emit-llvm -o $*.bc $*.c
 
-qsort.s: qsort.bc
-	opt -load ../cfcss-test-build/Debug+Asserts/lib/CFCSS.so -debug -instrument-blocks < qsort.bc > qsort-instrumented.bc
-	opt -simplifycfg -mem2reg -instcombine -dse < qsort-instrumented.bc > qsort-optimized.bc
-	llc -o qsort.s qsort-optimized.bc
+%-instrumented.bc: %.bc ../cfcss-build/Debug+Asserts/lib/CFCSS.so
+	opt -load ../cfcss-build/Debug+Asserts/lib/CFCSS.so -debug -instrument-blocks < $*.bc > $*-instrumented.bc
 
-callgraphs: test.ps qsort.ps printarray.ps
+%-optimized.bc: %-instrumented.bc
+	opt -simplifycfg -mem2reg -instcombine -dse < $*-instrumented.bc > $*-optimized.bc
 
-cfgs:
-	opt -dot-cfg < qsort-instrumented.bc > /dev/null
-	mv cfg.qsort.dot qsort-instrumented.dot
-	dot -Tpdf qsort-instrumented.dot > qsort-instrumented.pdf
-	opt -simplifycfg -mem2reg -instcombine -dse < qsort-instrumented.bc > qsort-optimized.bc
-	opt -dot-cfg < qsort-optimized.bc > /dev/null
-	mv cfg.qsort.dot qsort-optimized.dot
-	dot -Tpdf qsort-optimized.dot > qsort-optimized.pdf
+%.s: %-optimized.bc
+	llc -o $*.s $*-optimized.bc
 
-test.dot: test.bc
-	opt -dot-callgraph < test.bc > /dev/null
-	mv callgraph.dot test.dot
+%-instrumented.dot: %-instrumented.bc
+	opt -dot-cfg < $*-instrumented.bc > /dev/null
+	mv cfg.$*.dot $*-instrumented.dot
 
-test.pdf: test.dot
-	dot -Tpdf test.dot > test.pdf
+%-optimized.dot: %-optimized.bc
+	opt -dot-cfg < $*-optimized.bc > /dev/null
+	mv cfg.$*.dot $*-optimized.dot
 
-qsort.dot: qsort.bc
-	opt -dot-callgraph < qsort.bc > /dev/null
-	mv callgraph.dot qsort.dot
+%-callgraph.dot: %-instrumented.bc
+	opt -dot-callgraph < $*-instrumented.bc > /dev/null
+	mv callgraph.dot $*-callgraph.dot
 
-qsort.pdf: qsort.dot
-	dot -Tpdf qsort.dot > qsort.pdf
+%-instrumented.pdf: %-instrumented.dot
+	dot -Tpdf $*-instrumented.dot > $*-instrumented.pdf
 
-printarray.dot: printarray.bc
-	opt -dot-callgraph < printarray.bc > /dev/null
-	mv callgraph.dot printarray.dot
+%-optimized.pdf: %-optimized.dot
+	dot -Tpdf $*-optimized.dot > $*-optimized.pdf
 
-printarray.pdf: printarray.dot
-	dot -Tpdf printarray.dot > printarray.pdf
+%-callgraph.pdf: %-callgraph.dot
+	dot -Tpdf $*-callgraph.dot > $*-callgraph.pdf
+
+callgraphs: test-callgraph.pdf qsort-callgraph.pdf printarray-callgraph.pdf
+

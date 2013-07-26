@@ -1,3 +1,7 @@
+CFCSS_LIBRARY ?= ../cfcss-build/Debug+Asserts/lib/CFCSS.so
+PASS_NAME ?= -instrument-blocks
+OPT_DEBUG_OPTIONS ?= -debug -debug-pass=Structure
+
 all:
 	clang -03 -g -o test test.c qsort.c printarray.c
 
@@ -16,8 +20,8 @@ o3:
 %.bc: %.c
 	clang -g -c -emit-llvm -o $*.bc $*.c
 
-%-instrumented.bc: %.bc ../cfcss-build/Debug+Asserts/lib/CFCSS.so
-	opt -load ../cfcss-build/Debug+Asserts/lib/CFCSS.so -debug -instrument-blocks < $*.bc > $*-instrumented.bc
+%-instrumented.bc: %.bc $(CFCSS_LIBRARY)
+	opt -load $(CFCSS_LIBRARY) $(OPT_DEBUG_OPTIONS) $(PASS_NAME) < $*.bc > $*-instrumented.bc
 
 %-optimized.bc: %-instrumented.bc
 	opt -simplifycfg -mem2reg -instcombine -dse < $*-instrumented.bc > $*-optimized.bc

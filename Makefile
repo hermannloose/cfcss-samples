@@ -1,6 +1,7 @@
 CFCSS_LIBRARY ?= ../cfcss-build/Debug+Asserts/lib/CFCSS.so
 PASS_NAME ?= -instrument-blocks
 OPT_DEBUG_OPTIONS ?= -debug -debug-pass=Structure
+OPTIMIZATION_PASSES ?= -mem2reg -simplifycfg
 
 CLANG = clang
 LLC = llc
@@ -29,7 +30,7 @@ o3:
 	$(OPT) -load $(CFCSS_LIBRARY) $(OPT_DEBUG_OPTIONS) $(PASS_NAME) < $*.bc > $*-instrumented.bc
 
 %-optimized.bc: %-instrumented.bc
-	$(OPT) -simplifycfg -mem2reg -instcombine -dse < $*-instrumented.bc > $*-optimized.bc
+	$(OPT) $(OPTIMIZATION_PASSES) < $*-instrumented.bc > $*-optimized.bc
 
 %.s: %-optimized.bc
 	$(LLC) -o $*.s $*-optimized.bc
@@ -60,3 +61,8 @@ callgraphs: test-callgraph.pdf qsort-callgraph.pdf printarray-callgraph.pdf
 whole_module.bc: test.bc qsort.bc printarray.bc
 	$(LLVM_LINK) -o whole_module.bc $^
 
+whole_module-instrumented: whole_module-instrumented.bc
+	$(CLANG) -O0 -g -o whole_module-instrumented $^
+
+whole_module-optimized: whole_module-optimized.bc
+	$(CLANG) -O0 -g -o whole_module-optimized $^
